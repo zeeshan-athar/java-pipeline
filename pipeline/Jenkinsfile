@@ -1,36 +1,34 @@
 pipeline {
-    agent {
-        label 'master'
+    agent { 
+        label 'master' 
     }
-
+    
     environment {
-       mailRecipients = 'zeeshan.athar@nxb.com.pk'
+        deployOn = 'staging'
     }
-
+    
     stages {
-        stage('Production Deployment') {
-            when {
-                branch 'main'
-            }
+        stage('Deployment started') {
             steps {
-             script {
-              echo 'Deploying to : Production'
-              ansiblePlaybook become: true, colorized: true, credentialsId: 'ansible-login', disableHostKeyChecking: true, installation: 'ansible', inventory:'pipeline/hosts', playbook: 'pipeline/helmPlaybook.yaml'
+                script {
+                    if (deployOn == 'production') {
+                        echo 'Deploying to : ' + deployOn
+                        ansiblePlaybook become: true, colorized: true, credentialsId: 'ansible-login', disableHostKeyChecking: true, installation: 'ansible', inventory: 'pipeline/hosts', playbook: 'pipeline/helmPlaybook.yaml'
+                    }  else if (deployOn == 'staging') {
+                        echo 'Deploying to : ' + deployOn
+                        withCredentials([usernamePassword(credentialsId: 'dockerhublogin', usernameVariable: 'dh_username', passwordVariable: 'dh_password')]){
+                        ansiblePlaybook become: true, extras: '-e dh_username=$dh_username -e dh_password=$dh_password', colorized: true, credentialsId: 'ansible-login', disableHostKeyChecking: true, installation: 'ansible', inventory: 'pipeline/hosts', playbook: 'pipeline/playbook.yaml'
+                        }} else if (deployOn == 'testing') {
+                        echo 'Deploying to : ' + deployOn
+                        withCredentials([usernamePassword(credentialsId: 'dockerhublogin', usernameVariable: 'dh_username', passwordVariable: 'dh_password')]){
+                        ansiblePlaybook become: true, extras: '-e dh_username=$dh_username -e dh_password=$dh_password', colorized: true, credentialsId: 'ansible-login', disableHostKeyChecking: true, installation: 'ansible', inventory: 'pipeline/hosts', playbook: 'pipeline/testPlaybook.yaml'
+                        }
+                        //echo 'Emailing...'
+                        //def mailRecipients = 'zeeshan.athar@nxb.com.pk'
+                        //emailext body: ''' <a href="http://10.28.82.146:8080/job/node-pipeline/buildWithParameters?token=access-token&deployOn=production">Click to deploy on production.</a>''', to: "${mailRecipients}", subject: "Project '${currentBuild.projectName}' Status:'${currentBuild.currentResult}'"
+                    }
+                }
             }
-          }
         }
-        stage('Staging Deployment') {
-        when {
-            branch 'testing'
-        }
-        steps {
-         script {
-          echo 'Deploying to : Staging'
-          withCredentials([usernamePassword(credentialsId: 'dockerhublogin', usernameVariable: 'dh_username', passwordVariable: 'dh_password')]){
-          ansiblePlaybook become: true, extras: '-e dh_username=$dh_username -e dh_password=$dh_password', colorized: true, credentialsId: 'ansible-login', disableHostKeyChecking: true, installation: 'ansible', inventory: 'pipeline/hosts', playbook: 'pipeline/playbook.yaml'
-          }
-        }
-      }
     }
-  }
 }
