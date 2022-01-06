@@ -23,9 +23,6 @@ pipeline {
                         withCredentials([usernamePassword(credentialsId: 'dockerhublogin', usernameVariable: 'dh_username', passwordVariable: 'dh_password')]){
                         ansiblePlaybook become: true, extras: '-e dh_username=$dh_username -e dh_password=$dh_password', colorized: true, credentialsId: 'ansible-login', disableHostKeyChecking: true, installation: 'ansible', inventory: 'pipeline/hosts', playbook: 'pipeline/testPlaybook.yaml'
                         }
-                        //echo 'Emailing...'
-                        //def mailRecipients = 'zeeshan.athar@nxb.com.pk'
-                        //emailext body: ''' <a href="http://10.28.82.146:8080/job/node-pipeline/buildWithParameters?token=access-token&deployOn=production">Click to deploy on production.</a>''', to: "${mailRecipients}", subject: "Project '${currentBuild.projectName}' Status:'${currentBuild.currentResult}'"
                     }
                 }
             }
