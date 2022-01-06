@@ -1,0 +1,12 @@
+---
+- hosts: webservers
+  vars_files:
+    - default.yml
+
+  tasks:
+     - name: Clone a private repository into {{webapps_dir}} folder.
+       git:
+        repo: "{{ repo_url }}"
+        version: "{{ repo_version }}"
+        dest: "{{ webapps_dir }}"
+        force: yes

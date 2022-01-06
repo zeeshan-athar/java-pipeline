@@ -1,0 +1,8 @@
+---
+repo_url: git@github.com:zeeshan-athar/java-pipeline.git
+repo_remote: origin
+repo_version: main
+webapps_dir: /javaApp/
+default_container_name: java-server
+default_container_image: 03314839765/java
+default_container_tag: latest

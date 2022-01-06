@@ -1,0 +1,101 @@
+---
+- hosts: webservers
+  vars_files:
+    - default.yml
+
+  tasks:
+     - name: Copying ssh key file to target host
+       copy:
+        src: /home/zee/id_rsa
+        dest: /root/.ssh
+        owner: root
+        group: root        
+        mode: 0600
+      
+     - name: Clone a private repository into {{webapps_dir}} folder.
+       git:
+        repo: "{{ repo_url }}"
+        version: "{{ repo_version }}"
+        dest: "{{ webapps_dir }}"
+        force: yes
+         
+     - name: Docker dependency installation
+       apt:
+        name: "{{item}}"
+        state: present
+        update_cache: true
+       loop:
+         - apt-transport-https
+         - ca-certificates
+         - curl
+         - gnupg-agent
+         - software-properties-common
+
+     - name: add Docker GPG Key
+       apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+     - name: Add docker repository to apt
+       apt_repository:
+        repo: deb https://download.docker.com/linux/ubuntu bionic stable
+        state: present
+
+     - name: Docker Installation
+       apt:
+        name: "{{item}}"
+        state: present
+        update_cache: true
+       loop:
+         - docker-ce
+         - docker-ce-cli
+         - containerd.io
+
+     - name: create Docker Service directory
+       file:
+        path: /etc/systemd/system/docker.service.d
+        state: directory
+
+     - name: start docker service
+       service:
+        name: docker
+        state: started
+        enabled: true
+      
+     - name: Start service docker
+       service:
+        name: docker
+        state: started
+        
+     - name: Log into DockerHub
+       docker_login:
+        username: "{{ dh_username }}"
+        password: "{{ dh_password }}"
+
+     
+     - name: Build image named {{ default_container_image }}. Push it to a Docker Hub.
+       docker_image:
+         build:
+           path: "{{ webapps_dir }}"
+         name: "{{ default_container_image }}"
+         tag: "{{ default_container_tag }}"
+         push: yes
+         force_source: yes
+         source: build
+        
+     - name: Log out of DockerHub
+       docker_login:
+        state: absent
+
+     - name: Create container named {{ default_container_name }}
+       docker_container:
+        name: "{{ default_container_name }}"
+        image: "{{ default_container_image }}:{{default_container_tag}}"
+        recreate: yes
+        ports:
+          - "3001:3000"
+        state: started
+        
+     - name: Remove old images
+       docker_prune:
+         images: yes

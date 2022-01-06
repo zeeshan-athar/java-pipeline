@@ -1,0 +1,43 @@
+---
+- hosts: kubecluster
+  vars_files:
+    - default.yml
+  tasks:
+     - name: Copying ssh key file to target host
+       copy:
+        src: /home/zee/id_rsa
+        dest: /root/.ssh
+        owner: root
+        group: root        
+        mode: 0600
+     
+     - name: ensure github.com is a known host
+       lineinfile:
+         dest: /root/.ssh/known_hosts
+         create: yes
+         state: present
+         line: "{{ lookup('pipe', 'ssh-keyscan -t rsa github.com') }}"
+         regexp: "^github\\.com"
+    
+     - name: Clone a private repository into {{webapps_dir}} folder.
+       git:
+         repo: "{{ repo_url }}"
+         version: "{{ repo_version }}"
+         dest: "{{ webapps_dir }}"
+         force: yes
+     
+     - name: Check if chart is deployed already or not
+       shell: "helm ls | grep nodeapp | awk '{print $2}'"
+       register: revisionNumber
+     
+     - name: Installing helm chart
+       shell: "helm install -n nodeapp {{ webapps_dir }}pipeline/node-helm-demo/"
+       args:
+         executable: /bin/bash
+       when: revisionNumber.stdout == ""
+       
+     - name: Current Revision No. {{revisionNumber.stdout}}. Upgrading helm chart
+       shell: "helm upgrade --recreate-pods nodeapp {{ webapps_dir }}pipeline/node-helm-demo/"
+       args:
+         executable: /bin/bash
+       when: revisionNumber.stdout > "0"

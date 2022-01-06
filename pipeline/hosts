@@ -1,0 +1,8 @@
+[webservers]
+10.28.82.84
+
+[kubecluster]
+10.28.82.74
+
+[all:vars]
+ansible_python_interpreter=/usr/bin/python3
